@@ -19,15 +19,3 @@ __all__ = [
     "DependencyInstaller",
     "DependencyValidator"
 ]
-
-__version__ = "0.1.0"
-
-from .analyzers.repository_analyzer import RepositoryAnalyzer
-from .trackers.dependency_tracker import DependencyTracker
-from .validators.compatibility_checker import CompatibilityChecker
-
-__all__ = [
-    "RepositoryAnalyzer",
-    "DependencyTracker", 
-    "CompatibilityChecker"
-]

@@ -83,9 +83,12 @@ def install_command(args):
     if args.lockfile:
         success = installer.install_from_lockfile(args.lockfile)
     else:
+        features = args.features.split(',') if args.features else None
         success = installer.install_dependencies(
             include_dev=args.dev,
             include_optional=args.optional,
+            include_system=args.system,
+            features=features,
             upgrade=args.upgrade
         )
         
@@ -217,6 +220,10 @@ Examples:
                                help="Include development dependencies")
     install_parser.add_argument("--optional", action="store_true",
                                help="Include optional dependencies")
+    install_parser.add_argument("--system", action="store_true",
+                               help="Include system dependencies (Docker, Git, etc.)")
+    install_parser.add_argument("--features", 
+                               help="Comma-separated list of features to install (docker,http,ssl,etc.)")
     install_parser.add_argument("--upgrade", action="store_true",
                                help="Upgrade existing packages")
     install_parser.add_argument("--lockfile", help="Install from specific lockfile")

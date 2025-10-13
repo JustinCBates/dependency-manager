@@ -160,13 +160,200 @@ class DependencyInstaller:
                 
         return resolved
         
+    def install_system_dependencies(self) -> bool:
+        """Install system-level dependencies like Docker, Git, etc."""
+        print("🔧 Checking and installing system dependencies...")
+        
+        dependencies_needed = []
+        
+        # Check Docker
+        result = subprocess.run(["which", "docker"], capture_output=True)
+        if result.returncode != 0:
+            dependencies_needed.append("docker")
+            
+        # Check Git
+        result = subprocess.run(["which", "git"], capture_output=True)
+        if result.returncode != 0:
+            dependencies_needed.append("git")
+            
+        # Check Docker Compose
+        result = subprocess.run(["docker", "compose", "version"], capture_output=True)
+        if result.returncode != 0:
+            result = subprocess.run(["docker-compose", "--version"], capture_output=True)
+            if result.returncode != 0:
+                dependencies_needed.append("docker-compose")
+                
+        if not dependencies_needed:
+            print("✅ All system dependencies are already installed")
+            return True
+            
+        print(f"⚠️ Missing system dependencies: {', '.join(dependencies_needed)}")
+        
+        # Detect OS and install
+        import platform
+        system = platform.system().lower()
+        
+        if system == "linux":
+            return self._install_linux_dependencies(dependencies_needed)
+        elif system == "darwin":
+            return self._install_macos_dependencies(dependencies_needed)
+        else:
+            print(f"❌ Unsupported system: {system}")
+            return False
+            
+    def _install_linux_dependencies(self, dependencies: List[str]) -> bool:
+        """Install dependencies on Linux systems."""
+        # Detect package manager
+        if subprocess.run(["which", "apt-get"], capture_output=True).returncode == 0:
+            return self._install_apt_dependencies(dependencies)
+        elif subprocess.run(["which", "yum"], capture_output=True).returncode == 0:
+            return self._install_yum_dependencies(dependencies)
+        elif subprocess.run(["which", "dnf"], capture_output=True).returncode == 0:
+            return self._install_dnf_dependencies(dependencies)
+        else:
+            print("❌ No supported package manager found (apt, yum, dnf)")
+            return False
+            
+    def _install_apt_dependencies(self, dependencies: List[str]) -> bool:
+        """Install dependencies using apt (Debian/Ubuntu)."""
+        try:
+            # Update package list
+            subprocess.run(["sudo", "apt-get", "update"], check=True)
+            
+            for dep in dependencies:
+                if dep == "docker":
+                    print("Installing Docker via official script...")
+                    # Use Docker's official installation script
+                    result = subprocess.run([
+                        "curl", "-fsSL", "https://get.docker.com", "|", "sh"
+                    ], shell=True, capture_output=True, text=True)
+                    if result.returncode == 0:
+                        subprocess.run(["sudo", "usermod", "-aG", "docker", 
+                                      subprocess.getoutput("whoami")], check=True)
+                        print("⚠️ You may need to log out and back in for Docker permissions")
+                elif dep == "git":
+                    subprocess.run(["sudo", "apt-get", "install", "-y", "git"], check=True)
+                elif dep == "docker-compose":
+                    # Docker Compose is included in modern Docker installations
+                    print("Docker Compose should be included with Docker installation")
+                    
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Failed to install dependencies: {e}")
+            return False
+            
+    def _install_yum_dependencies(self, dependencies: List[str]) -> bool:
+        """Install dependencies using yum (RHEL/CentOS)."""
+        try:
+            for dep in dependencies:
+                if dep == "docker":
+                    subprocess.run(["sudo", "yum", "install", "-y", "docker"], check=True)
+                    subprocess.run(["sudo", "systemctl", "start", "docker"], check=True)
+                    subprocess.run(["sudo", "systemctl", "enable", "docker"], check=True)
+                    subprocess.run(["sudo", "usermod", "-aG", "docker", 
+                                  subprocess.getoutput("whoami")], check=True)
+                elif dep == "git":
+                    subprocess.run(["sudo", "yum", "install", "-y", "git"], check=True)
+                    
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Failed to install dependencies: {e}")
+            return False
+            
+    def _install_dnf_dependencies(self, dependencies: List[str]) -> bool:
+        """Install dependencies using dnf (Fedora)."""
+        try:
+            for dep in dependencies:
+                if dep == "docker":
+                    subprocess.run(["sudo", "dnf", "install", "-y", "docker"], check=True)
+                    subprocess.run(["sudo", "systemctl", "start", "docker"], check=True)
+                    subprocess.run(["sudo", "systemctl", "enable", "docker"], check=True)
+                    subprocess.run(["sudo", "usermod", "-aG", "docker", 
+                                  subprocess.getoutput("whoami")], check=True)
+                elif dep == "git":
+                    subprocess.run(["sudo", "dnf", "install", "-y", "git"], check=True)
+                    
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Failed to install dependencies: {e}")
+            return False
+            
+    def _install_macos_dependencies(self, dependencies: List[str]) -> bool:
+        """Install dependencies on macOS."""
+        # Check if Homebrew is installed
+        if subprocess.run(["which", "brew"], capture_output=True).returncode != 0:
+            print("❌ Homebrew not found. Please install Homebrew first:")
+            print("   /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"")
+            return False
+            
+        try:
+            for dep in dependencies:
+                if dep == "docker":
+                    subprocess.run(["brew", "install", "--cask", "docker"], check=True)
+                    print("⚠️ You may need to start Docker Desktop manually")
+                elif dep == "git":
+                    subprocess.run(["brew", "install", "git"], check=True)
+                elif dep == "docker-compose":
+                    print("Docker Compose is included with Docker Desktop")
+                    
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Failed to install dependencies: {e}")
+            return False
+
+    def install_feature_dependencies(self, features: List[str] = None) -> bool:
+        """Install optional feature dependencies based on enabled features."""
+        if not features:
+            return True
+            
+        feature_packages = {
+            "docker": ["docker>=7.0.0"],
+            "http": ["requests>=2.31.0"],
+            "external": ["requests>=2.31.0"],
+            "system": ["psutil>=5.9.0", "netifaces>=0.11.0"],
+            "monitoring": ["psutil>=5.9.0", "netifaces>=0.11.0"],
+            "ssl": ["cryptography>=41.0.0"],
+            "crypto": ["cryptography>=41.0.0"],
+            "coverage": ["pytest-cov>=4.0.0", "coverage"],
+            "advanced-testing": ["pytest-mock>=3.11.0"],
+            "security": ["bandit>=1.7.0", "safety>=2.3.0"],
+            "docs": ["sphinx>=5.0.0"]
+        }
+        
+        packages_to_install = []
+        for feature in features:
+            if feature in feature_packages:
+                packages_to_install.extend(feature_packages[feature])
+                print(f"  + {feature} support")
+                
+        if packages_to_install:
+            pip_cmd = self._get_pip_command()
+            print(f"🔌 Installing feature dependencies: {', '.join(features)}")
+            
+            result = subprocess.run([*pip_cmd, "install"] + packages_to_install,
+                                  capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                print(f"❌ Failed to install feature dependencies: {result.stderr}")
+                return False
+                
+        print("✅ Feature dependencies installed successfully")
+        return True
+
     def install_dependencies(self, include_dev: bool = True, 
                            include_optional: bool = False,
+                           include_system: bool = False,
+                           features: List[str] = None,
                            upgrade: bool = False) -> bool:
         """Install all resolved dependencies."""
         if not self.venv_path.exists():
             if not self.create_virtual_environment():
                 return False
+                
+        # Install system dependencies if requested
+        if include_system:
+            if not self.install_system_dependencies():
+                print("⚠️ System dependency installation failed, continuing with Python deps...")
                 
         # Collect and resolve dependencies
         all_deps = self.collect_all_dependencies()
@@ -212,6 +399,11 @@ class DependencyInstaller:
             if result.returncode != 0:
                 print(f"Warning: Some optional dependencies failed to install: {result.stderr}")
                 
+        # Install feature dependencies
+        if features:
+            if not self.install_feature_dependencies(features):
+                print("⚠️ Some feature dependencies failed to install")
+
         print("✅ Dependencies installed successfully!")
         return True
         

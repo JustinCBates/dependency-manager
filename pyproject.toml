@@ -7,14 +7,13 @@ name = "dependency-manager"
 version = "0.2.0"
 description = "Centralized dependency management for OpenProject multi-repository ecosystem"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "Justin Bates", email = "justin@justinbates.dev"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License", 
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
